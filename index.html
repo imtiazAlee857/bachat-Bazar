@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome Bachat Bazar</title>
+
+    <!-- Favicon (App Icon) -->
+    <link rel="icon" type="image/png" href="favicon.png">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                .then(() => console.log("? Service Worker Registered"))
+                .catch(err => console.log("? Service Worker Registration Failed", err));
+            });
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: #F8F9FA; /* OLX-like Light Grey */
+            color: #212529;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+        }
+        header {
+            background: #ff9800;
+            padding: 20px;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .login, .post-ad, .ads {
+            background: white;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        input, select, button {
+            padding: 10px;
+            margin: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 90%;
+        }
+        button {
+            background: linear-gradient(to bottom, #ff9800, #e68900);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+        button:hover {
+            transform: scale(1.05);
+        }
+        .ad-item {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px;
+            background: #fff;
+            border-radius: 5px;
+            position: relative;
+        }
+        .ad-images img {
+            width: 100px;
+            height: 100px;
+            border-radius: 5px;
+            display: none;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        .ad-images img:first-child {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <header>Welcome Bachat Bazar</header>
+    
+    <div class="container">
+        <div class="login">
+            <h2>Login / Signup</h2>
+            <input type="text" id="username" placeholder="Enter Username" required>
+            <input type="password" id="password" placeholder="Enter Password" required>
+            <button onclick="loginUser()">Login</button>
+        </div>
+
+        <div class="post-ad">
+            <h2>Post Your Ad</h2>
+            <input type="text" id="ad-title" placeholder="Ad Title" required>
+            <input type="text" id="ad-price" placeholder="Price" required>
+            <select id="ad-category">
+                <option>Mobile</option>
+                <option>Electronics</option>
+                <option>Cars</option>
+                <option>Property</option>
+            </select>
+            <input type="file" id="ad-image1" accept="image/*">
+            <input type="file" id="ad-image2" accept="image/*">
+            <input type="file" id="ad-image3" accept="image/*">
+            <button onclick="postAd()">Post Ad</button>
+        </div>
+
+        <div class="ads" id="ads-list">
+            <h2>Available Ads</h2>
+        </div>
+    </div>
+
+    <script>
+        let users = [];
+        let ads = [];
+        let admin = "admin123"; // Admin username for deleting ads
+        
+        function loginUser() {
+            let username = document.getElementById("username").value;
+            let password = document.getElementById("password").value;
+            if(username && password) {
+                users.push({ username, password });
+                alert("Login Successful");
+            } else {
+                alert("Please enter valid details");
+            }
+        }
+
+        function postAd() {
+            let title = document.getElementById("ad-title").value;
+            let price = document.getElementById("ad-price").value;
+            let category = document.getElementById("ad-category").value;
+            let image1 = document.getElementById("ad-image1").files[0];
+            let image2 = document.getElementById("ad-image2").files[0];
+            let image3 = document.getElementById("ad-image3").files[0];
+            
+            if(title && price && image1 && image2 && image3) {
+                let newAd = {
+                    title,
+                    price,
+                    category,
+                    images: [URL.createObjectURL(image1), URL.createObjectURL(image2), URL.createObjectURL(image3)]
+                };
+                ads.push(newAd);
+                displayAds();
+            } else {
+                alert("Please fill all fields and upload 3 images");
+            }
+        }
+        
+        function displayAds() {
+            let adsList = document.getElementById("ads-list");
+            adsList.innerHTML = "<h2>Available Ads</h2>";
+            ads.forEach((ad, index) => {
+                let imagesHTML = ad.images.map((img, i) => `<img src="${img}" class='ad-image' data-index="${i}">`).join('');
+                adsList.innerHTML += `
+                    <div class='ad-item'>
+                        <h3>${ad.title}</h3>
+                        <p>Price: ${ad.price}</p>
+                        <p>Category: ${ad.category}</p>
+                        <div class='ad-images'>${imagesHTML}</div>
+                        ${users.find(user => user.username === admin) ? `<button onclick="deleteAd(${index})">Delete</button>` : ''}
+                    </div>`;
+            });
+            startImageRotation();
+        }
+        
+        function startImageRotation() {
+            let adsElements = document.querySelectorAll('.ad-item');
+            adsElements.forEach(adEl => {
+                let images = adEl.querySelectorAll('.ad-images img');
+                let index = 0;
+                setInterval(() => {
+                    images.forEach(img => img.style.display = 'none');
+                    images[index].style.display = 'block';
+                    index = (index + 1) % images.length;
+                }, 2000);
+            });
+        }
+        
+        function deleteAd(index) {
+            ads.splice(index, 1);
+            displayAds();
+        }
+    </script>
+</body>
+</html>
